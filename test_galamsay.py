@@ -28,11 +28,12 @@ from api import app
 def temp_csv():
     """Create a temporary CSV file for testing."""
     content = """City,Region,Number_of_Galamsay_Sites
-Accra,Greater Accra,30
 Kumasi,Ashanti,25
+Accra,Greater Accra,20
 Takoradi,Western,18
 Tamale,Northern,7
 Bolgatanga,Upper East,5
+Obuasi,Ashanti,10
 """
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv') as f:
         f.write(content)
@@ -209,8 +210,8 @@ class TestCSVLoading:
         result = analyzer.load_csv()
         
         assert result is True
-        assert len(analyzer.raw_data) == 5
-        assert analyzer.raw_data[0]['City'] == 'Accra'
+        assert len(analyzer.raw_data) == 6
+        assert analyzer.raw_data[0]['City'] == 'Kumasi'
     
     def test_load_nonexistent_file(self):
         """Loading non-existent file should fail gracefully."""
@@ -239,9 +240,9 @@ class TestAnalysis:
         
         # Verify results
         assert results['total_sites'] == 85
-        assert results['region_with_highest'] == 'Ashanti'
-        assert results['highest_count'] == 25
-        assert len(results['cleaned_data']) == 5
+        assert results['region_with_highest'] == 'Ashanti'  # Ashanti has 25+10=35 sites
+        assert results['highest_count'] == 35
+        assert len(results['cleaned_data']) == 6
     
     def test_analysis_handles_dirty_data(self, temp_csv_with_errors):
         """Analysis should handle and reject dirty data."""
@@ -250,11 +251,12 @@ class TestAnalysis:
         assert analyzer.load_csv() is True
         assert analyzer.clean_data() is True
         
-        # Should have cleaned 2 valid records (Accra, Valid City)
-        assert len(analyzer.cleaned_data) == 2
+        # Should have cleaned 3 valid records (Accra, Cape Coast with 1000, Valid City)
+        # Cape Coast's 1000 is flagged as suspicious but still accepted (warning, not error)
+        assert len(analyzer.cleaned_data) == 3
         
-        # Should have errors for invalid records
-        assert len(analyzer.errors) > 0
+        # Should have errors for the invalid records
+        assert len(analyzer.errors) >= 3
     
     def test_cities_exceeding_threshold(self, temp_csv):
         """Should correctly identify cities exceeding threshold."""
